@@ -51,37 +51,40 @@ psfzoom4 = psfzoom4 / sum(psfzoom4(:));
 
 
 %%
+tic
+
 f = double(g_obs);
 f = f / max(f(:));
 % --- your existing pre-step (optional RL warm start) ---
 f = deconvlucy(f, psfzoom4, 10);
 
 % --- params (add stop rules; keep your weights) ---
-params.iter        = 5;        % hard cap (e.g., 30–50)
+params.iter        = 50;        % hard cap (e.g., 30–50)
 params.mu          = 20;
 params.lambda_tv   = 0.005;
-params.lambda_l0   = 0.03;
+params.lambda_l0   = 0.003;
 
 % optional background mask for sigma (logical same size as g)
 % params.bgMask = bgMask;   
 
 % stopping rules (all optional; these are sensible defaults)
 params.stop.rel_change_tol = 1.e-4;   % ||Δo||/||o|| < tol
-params.stop.window         = 3;      % …for M consecutive iters
-params.stop.chi2_tol       = 0.11;   % |χ²/N - 1| < 5% (Gaussian)
+params.stop.window         = 20;      % …for M consecutive iters
 params.stop.minIter        = 5;      % don0t stop too early
 params.stop.data_delta_tol = 1e-4;   % |Δ data residual| < tol
 
-% --- run (now returns diagnostics too) ---
+% --- run change psf between psf = E. Coli and beads
+% psfzoom4 = A549
 [f, diag] = deconv_residual(f, psfzoom4, params);
 
+
+toc
+%%
 % --- quick convergence plots ---
-figure('Color','w','Position',[80 80 1000 320]);
+figure('Color','w','Position',[80 80 700 320]);
 subplot(1,3,1); semilogy(diag.iter, diag.data_rel,'-o','LineWidth',2); grid on; box on;
 xlabel('iter'); ylabel('||H*o-g||/||g||'); title('data residual');
 
-subplot(1,3,2); plot(diag.iter, diag.chi2,'-o','LineWidth',2); hold on; yline(1,'--k'); grid on; box on;
-xlabel('iter'); ylabel('\chi^2 / N'); title('discrepancy');
 
 subplot(1,3,3); semilogy(diag.iter, diag.rel_change,'-o','LineWidth',2); hold on;
 yline(params.stop.rel_change_tol,'--'); grid on; box on; xlabel('iter'); ylabel('||Δo||/||o||'); title('relative change');
@@ -90,8 +93,7 @@ yline(params.stop.rel_change_tol,'--'); grid on; box on; xlabel('iter'); ylabel(
 
 
 
-toc
-beep
+
 %%  Fast plotting deconvolution output to check quality
 
 [nx, ny, nz] = size(f);
@@ -107,7 +109,7 @@ imagesc(f(:,:,cz));
 axis image off;
 title(sprintf('XY @ z = %d', 48));
 colormap(ax1,'jet');
-colorbar(ax1,'Location','eastoutside');
+% colorbar(ax1,'Location','eastoutside');
 
 % 2) XZ slice at y = center
 ax2 = subplot(2,2,2);
@@ -116,7 +118,7 @@ axis image off;
 xlabel('X'); ylabel('Z');
 title(sprintf('XZ @ y = %d', cy));
 colormap(ax2,'jet');
-colorbar(ax2,'Location','eastoutside');
+% colorbar(ax2,'Location','eastoutside');
 
 % 3) YZ slice at x = center
 ax3 = subplot(2,2,3);
@@ -125,7 +127,7 @@ axis image off;
 xlabel('Y'); ylabel('Z');
 title(sprintf('YZ @ x = %d', cx));
 colormap(ax3,'jet');
-colorbar(ax3,'Location','eastoutside');
+% colorbar(ax3,'Location','eastoutside');
 
 % 4) Axial (Z) profile at (cx,cy)
 subplot(2,2,4);
@@ -140,5 +142,5 @@ sgt.FontSize = 14;
 
 
 %% Write image back to tiff
-writeStackToTiff(f , 'decvonvolutedtest5iter.tif');
+writeStackToTiff(f , '500nm_deconv2.tif');
 
